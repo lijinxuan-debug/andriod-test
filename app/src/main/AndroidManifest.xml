@@ -11,24 +11,37 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Unitexml">
+
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            android:name=".MainActivity3"
+            android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MYAPP" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="myapp"
-                    android:host="user_profile"/>
+                <data
+                    android:host="user_profile"
+                    android:scheme="myapp" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".MainActivity2"
-            android:exported="false"/>
+            android:exported="false" />
+
+        <meta-data
+            android:name="weather"
+            android:value="hot" />
     </application>
 
 </manifest>
