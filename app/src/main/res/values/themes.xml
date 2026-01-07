@@ -1,36 +1,35 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.Unitexml" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-        <item name="statusBarBackground">@color/status_bar</item>
+<resources>
+
+    <style name="Theme.MyCalculator" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+<!--        背景采用白色-->
+        <item name="colorPrimary">@color/text_equal</item>
     </style>
 
-    <style name="Theme.Unitexml" parent="Base.Theme.Unitexml" />
-
-    <style name="CalculatorButton">
+    <style name="CalcButton" parent="Widget.MaterialComponents.Button">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>
-        <item name="android:layout_weight">1</item>
-        <item name="android:inset">0dp</item>
-        <item name="android:backgroundTint">@color/buttons_background</item>
-        <item name="android:textColor">@color/primary_text</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textSize">24sp</item>
-        <item name="android:foreground">?android:attr/selectableItemBackground</item>
+        <item name="android:insetTop">6dp</item>
+        <item name="android:insetBottom">6dp</item>
+        <item name="android:insetLeft">6dp</item>
+        <item name="android:insetRight">6dp</item>
+        <item name="cornerRadius">18dp</item>
+        <item name="android:textSize">50sp</item>
+        <item name="android:textStyle">normal</item>
     </style>
 
-    <style name="AllClearButton" parent="CalculatorButton">
-        <item name="android:textColor">@color/all_clear_text</item>
+    <style name="StyleNumeric" parent="CalcButton">
+        <item name="backgroundTint">@color/btn_numeric_bg</item>
+        <item name="android:textColor">@color/text_numeric</item>
     </style>
 
-    <style name="ActionButton" parent="CalculatorButton">
-        <item name="android:textColor">@color/action_text</item>
+    <style name="StyleOperator" parent="CalcButton">
+        <item name="backgroundTint">@color/btn_operator_bg</item>
+        <item name="android:textColor">@color/text_operator</item>
     </style>
 
-    <style name="EqualButton" parent="CalculatorButton">
-        <item name="android:textColor">@color/equal_button_text</item>
-        <item name="android:backgroundTint">@color/equal_button_background</item>
+    <style name="StyleEqual" parent="CalcButton">
+        <item name="backgroundTint">@color/btn_equal_bg</item>
+        <item name="android:textColor">@color/text_equal</item>
+        <item name="cornerRadius">24dp</item>
     </style>
-
 </resources>

@@ -9,24 +9,24 @@
         android:id="@+id/tv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/text2" />
+        android:text="假设" />
 
     <Button
         android:id="@+id/enable"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/enable"/>
+        android:text="启用"/>
 
     <Button
         android:id="@+id/disable"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/disable"/>
+        android:text="禁用"/>
 
     <Button
         android:id="@+id/test"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/test"/>
+        android:text="测试"/>
 
 </LinearLayout>

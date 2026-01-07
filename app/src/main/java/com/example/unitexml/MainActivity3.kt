@@ -3,254 +3,305 @@ package com.example.unitexml
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import com.example.unitexml.databinding.ActivityMain3Binding
+import java.util.Stack
+import kotlin.math.log
+import kotlin.math.sqrt
 
 class MainActivity3 : AppCompatActivity() {
 
     private lateinit var binding : ActivityMain3Binding
-
-    private var inputValue1 : Double? = 0.0
-    private var inputValue2 : Double? = null
-    private var currentOperator : Operator? = null
-    private var result : Double? = null
-    private var equation : StringBuilder = StringBuilder().append(ZERO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         binding = ActivityMain3Binding.inflate(layoutInflater)
         setContentView(binding.root)
-        setListeners()
-        setNightModeIndicator()
+        initButtons()
     }
 
-    private fun setListeners() {
-        for (button in getNumericButtons()) {
-            button.setOnClickListener { onNumberClicked(button.text.toString()) }
+    private fun initButtons() {
+        val commonButtons = listOf(
+            binding.button0, binding.button1, binding.button2, binding.button3,
+            binding.button4, binding.button5, binding.button6, binding.button7,
+            binding.button8, binding.button9, binding.buttonPoint,
+            binding.buttonPlus, binding.buttonMinus, binding.buttonMultiply,
+            binding.buttonDivide, binding.buttonLeftParen, binding.buttonRightParen,
+            binding.buttonPercent, binding.buttonSqu, binding.buttonFac
+        )
+
+        commonButtons.forEach { btn ->
+            btn.setOnClickListener {
+                // 将按钮文字追加到主屏幕
+                appendToMainDisplay(btn.text.toString())
+            }
         }
-        with(binding) {
-            buttonZero.setOnClickListener { onZeroClicked() }
-            buttonDoubleZero.setOnClickListener { onDoubleZeroClicked() }
-            buttonDecimalPoint.setOnClickListener { onDecimalPointClicked() }
-            buttonAddition.setOnClickListener { onOperatorClicked(Operator.ADDITION) }
-            buttonSubtraction.setOnClickListener { onOperatorClicked(Operator.DIVISION) }
-            buttonMultiplication.setOnClickListener { onOperatorClicked(Operator.MULTIPLICATION) }
-            buttonDivision.setOnClickListener { onOperatorClicked(Operator.DIVISION) }
-            buttonEquals.setOnClickListener { onEqualsClicked() }
-            buttonAllClear.setOnClickListener { onAllClearClicked() }
-            buttonPlusMinus.setOnClickListener { onPlusMinusClicked() }
-            buttonPercentage.setOnClickListener { onPercentageClicked() }
-            imageNightMode.setOnClickListener { toggleNightMode() }
+
+        binding.buttonClear.setOnClickListener {
+            binding.tvMain.text = "0"
+            binding.tvSecondary.text = ""
+        }
+
+        binding.backspace.setOnClickListener {
+            val current = binding.tvMain.text.toString()
+            if (current == "Error") {
+                binding.tvMain.text = "0"
+            }
+            else if (current.length > 1) {
+                binding.tvMain.text = current.dropLast(1)
+            } else {
+                binding.tvMain.text = "0"
+            }
+            tryLivePreview()
+        }
+
+        // 等号键 (计算结果)
+        binding.equal.setOnClickListener {
+            // 先占个位，下一步我们写计算逻辑
+            calculateResult()
         }
     }
 
-    // image_fc884e.jpg: 切换深色/浅色模式
-    private fun toggleNightMode() {
-        if (AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES) {
-            // 如果是夜间模式，切换为白天
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        } else {
-            // 否则切换为夜间
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+    private fun appendToMainDisplay(str: String) {
+        val current = binding.tvMain.text.toString()
+
+        // 1. 普通二元运算符（+ - × ÷）
+        val isBinaryOp = "[+\\-×÷]".toRegex()
+        // 2. 所有符号（包含小数点、根号等）
+        val isSpecial = "[+\\-×÷.√!%]".toRegex()
+
+        val lastChar = current.last().toString()
+
+        if (current == "0" || current == "Error") {
+            when (str) {
+                "√" -> {
+                    binding.tvMain.text = "√" // 0 变 √
+                }
+                "." -> {
+                    binding.tvMain.text = "0."
+                }
+                "%","+","!","×","÷","-" -> {
+                    return
+                }
+                else -> {
+                    binding.tvMain.text = str
+                }
+            }
         }
-        recreate() // 重新创建Activity以应用主题
+        // 情况：如果最后一位是 [+ - × ÷]，现在又按了一个 [+ - × ÷]
+        else if (lastChar.matches(isSpecial) && str.matches(isSpecial)) {
+            binding.tvMain.text = current.dropLast(1) + str // 替换旧符号
+        }
+        // 情况：防止 .√ 或 √. 这种错误
+        else if (lastChar == "." && str == "√") {
+            return // 不允许操作
+        }
+        else {
+            binding.tvMain.text = current + str
+        }
+
+        // 每次点击都尝试即时预览
+        tryLivePreview()
     }
 
-    // 根据当前模式设置图标 (太阳/月亮)
-    private fun setNightModeIndicator() {
-        if (AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES) {
-            binding.imageNightMode.setImageResource(R.drawable.ic_sun)
-        } else {
-            binding.imageNightMode.setImageResource(R.drawable.ic_moon)
-        }
-    }
+    private fun calculateResult() {
+        val expression = binding.tvMain.text.toString()
+        if (expression == "0" || expression.isEmpty()) return
 
-    // image_fc80a8.jpg: 百分比按键逻辑
-    private fun onPercentageClicked() {
-        if (inputValue2 == null) {
-            // 场景1：只输入了第一个数时点百分比 (如 50 -> 0.5)
-            val percentage = getInputValue1() / 100
-            inputValue1 = percentage
-            equation.clear().append(percentage)
-            updateInputOnDisplay()
-        } else {
-            // 场景2：输入了两个数和运算符时点百分比 (如 100 + 10% -> 100 + 10)
-            val percentageOfValue1 = (getInputValue1() * getInputValue2()) / 100
-            val percentageOfValue2 = getInputValue2() / 100
+        try {
 
-            result = when (requireNotNull(currentOperator)) {
-                Operator.ADDITION -> getInputValue1() + percentageOfValue1
-                Operator.SUBTRACTION -> getInputValue1() - percentageOfValue1
-                Operator.MULTIPLICATION -> getInputValue1() * percentageOfValue2
-                Operator.DIVISION -> getInputValue1() / percentageOfValue2
+            if (expression.last() == '√') {
+                throw ArithmeticException("结尾不能是根号")
             }
 
-            equation.clear().append(ZERO)
-            updateResultOnDisplay(isPercentage = true)
+            val result = evaluate(expression)
 
-            // 计算完成后重置状态，准备下一次计算
-            inputValue1 = result
-            result = null
-            inputValue2 = null
-            currentOperator = null
+            // 更新 UI
+            binding.tvSecondary.text = ""
+            binding.tvMain.text = formatResult(result)
+        } catch (e: Exception) {
+            // 如果计算出错（比如除以0，或者括号不匹配）
+            binding.tvMain.text = "Error"
+            binding.tvSecondary.text = ""
         }
     }
 
-    private fun onPlusMinusClicked() {
-        if (equation.startsWith(MINUS)) {
-            equation.deleteCharAt(0)
+    private fun evaluate(expression: String): Double {
+
+        var fixedExpression = expression
+
+        // 1. 统计左右括号数量差
+        val leftCount = fixedExpression.count { it == '(' }
+        val rightCount = fixedExpression.count { it == ')' }
+
+        // 2. 如果左括号多于右括号，在末尾补全
+        if (leftCount > rightCount) {
+            fixedExpression += ")".repeat(leftCount - rightCount)
+        }
+
+        val cleanedExp = fixedExpression
+            .replace("(?<=\\d)√".toRegex(), "×√")
+            .replace("(?<=\\d)\\(".toRegex(), "×(")
+            .replace("\\)(?=\\d)".toRegex(), ")×")
+            .replace("\\)√".toRegex(), ")×√")
+            .replace("!(?=\\d)".toRegex(), "!×")
+            .replace("%(?=\\d)".toRegex(), "%×")
+
+        val numbers = Stack<Double>()
+        val operators = Stack<Char>()
+
+        // 重新调整后的正则拆分，确保所有符号都被识别
+        val tokens = cleanedExp.split("(?<=[+\\-×÷()√!%])|(?=[+\\-×÷()√!%])".toRegex())
+
+        for (token in tokens) {
+            val t = token.trim()
+            if (t.isEmpty()) continue
+
+            when {
+                // 1. 处理数字
+                t[0].isDigit() || (t.length > 1 && t[0] == '.') -> {
+                    numbers.push(t.toDouble())
+                }
+
+                // 2. 处理根号 (前置符号：优先级极高)
+                t == "√" -> operators.push('√')
+
+                // 3. 处理百分号和阶乘 (后置符号：立即作用于栈顶数字)
+                t == "%" -> if (numbers.isNotEmpty()) numbers.push(numbers.pop() / 100.0)
+                t == "!" -> if (numbers.isNotEmpty()) numbers.push(factorial(numbers.pop()))
+
+                t == "(" -> operators.push('(')
+                t == ")" -> {
+                    while (operators.peek() != '(') {
+                        numbers.push(applyOp(operators.pop(), numbers))
+                    }
+                    operators.pop()
+                    // 括号算完后，看看前面有没有紧跟根号
+                    if (operators.isNotEmpty() && operators.peek() == '√') {
+                        numbers.push(applyOp(operators.pop(), numbers))
+                    }
+                }
+
+                isOperator(t[0]) -> {
+                    while (operators.isNotEmpty() && hasPrecedence(t[0], operators.peek())) {
+                        numbers.push(applyOp(operators.pop(), numbers))
+                    }
+                    operators.push(t[0])
+                }
+            }
+        }
+
+        while (operators.isNotEmpty()) {
+            numbers.push(applyOp(operators.pop(), numbers))
+        }
+        return numbers.pop()
+    }
+
+    private fun tryLivePreview() {
+        val expression = binding.tvMain.text.toString()
+
+        if (expression.isEmpty() || expression == "0") {
+            binding.tvSecondary.text = ""
+            return
+        }
+
+        try {
+            // 1. 准备一个待计算的变量
+            var calcExpression = expression
+
+            // 2. 正则：检查是否以运算符 [+\-×÷(] 结尾
+            val operatorAtEndRegex = "[+\\-×÷(]$".toRegex()
+
+            // 如果结尾是根号，直接报错
+            if (expression.last() == '√') {
+                throw ArithmeticException("末尾不能为根号")
+            }
+
+            // 3. 如果末尾确实是符号，我们就截取掉最后一位再算f
+            // 比如 "8-6+" 变成 "8-6" 参与计算
+            if (expression.contains(operatorAtEndRegex)) {
+                calcExpression = expression.dropLast(1)
+            }
+
+            // 4. 如果截取后变空了（比如只输入了一个“-”），就清空预览
+            if (calcExpression.isEmpty() || calcExpression.matches(operatorAtEndRegex)) {
+                binding.tvSecondary.text = ""
+                return
+            }
+
+            // 5. 执行计算并显示
+            val result = evaluate(calcExpression)
+            binding.tvSecondary.text = formatResult(result)
+
+        } catch (e: Exception) {
+            // 遇到括号未闭合等情况，保持预览区为空
+            binding.tvSecondary.text = "Error"
+        }
+    }
+
+    // 直接判断你的自定义符号
+    private fun isOperator(c: Char) = c == '+' || c == '-' || c == '×' || c == '÷'
+
+    // 判断优先级逻辑：如果 op2 优先级 >= op1，则返回 true
+    private fun hasPrecedence(op1: Char, op2: Char): Boolean {
+        if (op2 == '(' || op2 == ')') return false
+        return getPriority(op2) >= getPriority(op1)
+    }
+
+    // 优先级定义：√ 最高，乘除次之，加减最后
+    private fun getPriority(op: Char): Int {
+        return when (op) {
+            '√' -> 3
+            '×', '÷' -> 2
+            '+', '-' -> 1
+            else -> 0
+        }
+    }
+
+    // 核心运算逻辑
+    private fun applyOp(op: Char, numbers: Stack<Double>): Double {
+        // 根号是一元运算
+        if (op == '√') {
+            val a = numbers.pop()
+            return sqrt(a)
+        }
+
+        // 加减乘除是二元运算
+        if (numbers.size < 2) return if (numbers.isNotEmpty()) numbers.pop() else 0.0
+        val b = numbers.pop() // 第二个操作数
+        val a = numbers.pop() // 第一个操作数
+
+        return when (op) {
+            '+' -> a + b
+            '-' -> a - b
+            '×' -> a * b
+            '÷' -> {
+                if (b == 0.0) {
+                    throw ArithmeticException("除数不能为零") // 这里抛异常
+                } else {
+                    a / b
+                }
+            }
+            else -> 0.0
+        }
+    }
+
+    // 阶乘算法
+    private fun factorial(n: Double): Double {
+        if (n < 0) return 0.0
+        if (n == 0.0) return 1.0
+        var res = 1.0
+        for (i in 1..n.toInt()) res *= i
+        return res
+    }
+
+    // 格式化结果：如果是整数就不显示 .0
+    private fun formatResult(result: Double): String {
+        return if (result == result.toLong().toDouble()) {
+            result.toLong().toString()
         } else {
-            equation.insert(0,MINUS)
-        }
-        setInput()
-        updateInputOnDisplay()
-    }
-
-    private fun onAllClearClicked() {
-        inputValue1 = 0.0
-        inputValue2 = null
-        currentOperator = null
-        result = null
-        equation.clear().append(ZERO)
-        clearDisplay()
-    }
-
-    private fun onOperatorClicked(operator: Operator) {
-        onEqualsClicked()
-        currentOperator = operator
-    }
-
-    private fun getNumericButtons() = with(binding) {
-        arrayOf(
-            buttonOne,
-            buttonTwo,
-            buttonThree,
-            buttonFour,
-            buttonFive,
-            buttonSix,
-            buttonSeven,
-            buttonEight,
-            buttonNine
-        )
-    }
-
-    private fun onEqualsClicked() {
-        if (inputValue2 != null) {
-            result = calculate()
-            equation.clear().append(ZERO)
-            updateResultOnDisplay()
-            inputValue1 = result
-            result = null
-            inputValue2 = null
-            currentOperator = null
-        } else {
-            equation.clear().append(ZERO)
+            String.format("%.6f", result).trimEnd('0').trimEnd('.')
         }
     }
 
-    private fun calculate(): Double {
-        return when (requireNotNull(currentOperator)) {
-            Operator.ADDITION -> getInputValue1() + getInputValue2()
-            Operator.SUBTRACTION -> getInputValue1() - getInputValue2()
-            Operator.MULTIPLICATION -> getInputValue1() * getInputValue2()
-            Operator.DIVISION -> getInputValue1() / getInputValue2()
-        }
-    }
-
-    private fun onDecimalPointClicked() {
-        if (equation.contains(DECIMAL_POINT)) return
-        equation.append(DECIMAL_POINT)
-        setInput()
-        updateInputOnDisplay()
-    }
-
-    private fun onZeroClicked() {
-        if (equation.startsWith(ZERO)) return
-        onNumberClicked(ZERO)
-    }
-
-    private fun onDoubleZeroClicked() {
-        if (equation.startsWith(ZERO)) return
-        onNumberClicked(DOUBLE_ZERO)
-    }
-
-    private fun clearDisplay() {
-        with (binding) {
-            textInput.text = getFormattedDisplayValue(getInputValue1())
-            textEquation.text = null
-        }
-    }
-
-    private fun onNumberClicked(numberText: String) {
-        if (equation.startsWith(ZERO)) {
-            equation.deleteCharAt(0)
-        } else if (equation.startsWith("$MINUS$ZERO")) {
-            equation.deleteCharAt(1)
-        }
-
-        equation.append(numberText)
-        setInput()
-        updateInputOnDisplay()
-    }
-
-    private fun setInput() {
-        if (currentOperator == null) {
-            inputValue1 = equation.toString().toDouble()
-        } else {
-            inputValue2 = equation.toString().toDouble()
-        }
-    }
-
-    private fun updateInputOnDisplay() {
-        if (result == null) {
-            binding.textEquation.text = null
-        }
-        binding.textInput.text = equation
-    }
-
-    private fun updateResultOnDisplay(isPercentage: Boolean = false) {
-        binding.textInput.text = getFormattedDisplayValue(result)
-        var input2Text = getFormattedDisplayValue(result)
-        if (isPercentage) input2Text = "$input2Text${getString(R.string.percentage)}"
-        binding.textEquation.text = String.format(
-            "%s %s %s",
-            getFormattedDisplayValue(getInputValue1()),
-            getOperatorSymbol(),
-            input2Text
-        )
-    }
-
-    private fun getInputValue1() = inputValue1 ?: 0.0
-    private fun getInputValue2() = inputValue2 ?: 0.0
-
-    private fun getOperatorSymbol(): String {
-        return when (requireNotNull(currentOperator) {"运算符不可以为空"}) {
-            Operator.ADDITION -> getString(R.string.addition)
-            Operator.SUBTRACTION -> getString(R.string.subtraction)
-            Operator.MULTIPLICATION -> getString(R.string.multiplication)
-            Operator.DIVISION -> getString(R.string.division)
-        }
-    }
-
-    // 避免出现0.0的情况
-    private fun getFormattedDisplayValue(value: Double?): String? {
-        val originalValue = value ?: return null
-        return if (originalValue % 1 == 0.0) {
-            originalValue.toInt().toString()
-        } else {
-            originalValue.toString()
-        }
-    }
-
-    enum class Operator {
-        ADDITION, SUBTRACTION, MULTIPLICATION, DIVISION
-    }
-
-    private companion object {
-        const val DECIMAL_POINT = "."
-        const val ZERO = "0"
-        const val DOUBLE_ZERO = "00"
-        const val MINUS = "-"
-    }
 }
