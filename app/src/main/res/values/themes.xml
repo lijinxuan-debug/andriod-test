@@ -15,6 +15,7 @@
         <item name="cornerRadius">18dp</item>
         <item name="android:textSize">50sp</item>
         <item name="android:textStyle">normal</item>
+        <item name="android:fontFamily">sans-serif-light</item>
     </style>
 
     <style name="StyleNumeric" parent="CalcButton">

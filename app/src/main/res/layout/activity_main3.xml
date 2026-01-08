@@ -9,15 +9,20 @@
         android:id="@+id/tvMain"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="8dp"
-        android:ellipsize="start"
-        android:gravity="end"
-        android:singleLine="true"
-        android:text="0"
-        android:textColor="#212121"
+
         android:textSize="48sp"
-        android:textStyle="bold"
+        android:fontFamily="sans-serif-light"
+        android:textStyle="normal"
+        android:textColor="#212121"
+
+        android:singleLine="false"
+        android:maxLines="6"
+        android:gravity="end|bottom"
+
+        android:text="0"
         app:layout_constraintBottom_toTopOf="@+id/tvSecondary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

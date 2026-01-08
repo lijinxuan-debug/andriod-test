@@ -5,7 +5,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.example.unitexml.databinding.ActivityMain3Binding
 import java.util.Stack
-import kotlin.math.log
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 class MainActivity3 : AppCompatActivity() {
@@ -57,59 +57,119 @@ class MainActivity3 : AppCompatActivity() {
 
         // 等号键 (计算结果)
         binding.equal.setOnClickListener {
-            // 先占个位，下一步我们写计算逻辑
             calculateResult()
         }
     }
 
     private fun appendToMainDisplay(str: String) {
-        val current = binding.tvMain.text.toString()
+        var current = binding.tvMain.text.toString()
 
-        // 1. 普通二元运算符（+ - × ÷）
+        // 1. 清洗与重置
+        if (current == "Error") {
+            current = "0"
+        }
+        // 如果当前是纯科学计数法结果（且没开始输入运算符），输入数字则重置
+        if (current.contains("E") && !current.any { "+-×÷".contains(it) && current.indexOf(it) > current.indexOf('E') } && str.matches("[0-9]".toRegex())) {
+            current = "0"
+        }
+
+        val lastChar = if (current.isNotEmpty()) current.last().toString() else ""
         val isBinaryOp = "[+\\-×÷]".toRegex()
-        // 2. 所有符号（包含小数点、根号等）
-        val isSpecial = "[+\\-×÷.√!%]".toRegex()
 
-        val lastChar = current.last().toString()
+        // 【关键修改】：判断末尾是否为“真正的”运算符（排除 E+ 或 E-）
+        val isRealOperatorAtEnd = lastChar.matches(isBinaryOp) &&
+                (current.length < 2 || current[current.length - 2].uppercaseChar() != 'E')
 
-        if (current == "0" || current == "Error") {
-            when (str) {
-                "√" -> {
-                    binding.tvMain.text = "√" // 0 变 √
-                }
-                "." -> {
-                    binding.tvMain.text = "0."
-                }
-                "%","+","!","×","÷","-" -> {
-                    return
-                }
-                else -> {
-                    binding.tvMain.text = str
+        // 2. 小数点拦截：针对科学计数法特殊处理，不使用 split
+        if (str == ".") {
+            // 如果当前数字已经是科学计数法（E后面），通常不允许再点小数点
+            if (current.contains("E")) {
+                val afterE = current.substringAfterLast("E")
+                // 如果 E 之后还没有出现新的运算符，说明还在指数部分，拦截小数点
+                if (!afterE.any { "+-×÷".contains(it) && it != '+' && it != '-' }) return
+            }
+            // 普通小数点逻辑
+            val lastPart = current.split("[+\\-×÷()√!]".toRegex()).last()
+            if (lastPart.contains(".") || lastChar.matches("[!%]".toRegex())) return
+        }
+
+        // 3. 核心逻辑处理
+        when {
+            current == "0" -> {
+                when {
+                    str == "√" -> binding.tvMain.text = "√"
+                    str == "-" -> binding.tvMain.text = "-"
+                    str == "." -> binding.tvMain.text = "0."
+                    str.matches(isBinaryOp) || str.matches("[!%]".toRegex()) -> return
+                    else -> binding.tvMain.text = str
                 }
             }
-        }
-        // 情况：如果最后一位是 [+ - × ÷]，现在又按了一个 [+ - × ÷]
-        else if (lastChar.matches(isSpecial) && str.matches(isSpecial)) {
-            binding.tvMain.text = current.dropLast(1) + str // 替换旧符号
-        }
-        // 情况：防止 .√ 或 √. 这种错误
-        else if (lastChar == "." && str == "√") {
-            return // 不允许操作
-        }
-        else {
-            binding.tvMain.text = current + str
+
+            // 处理减号
+            str == "-" -> {
+                if (lastChar == "(" || lastChar == "×" || lastChar == "÷") {
+                    binding.tvMain.text = current + str
+                } else if (isRealOperatorAtEnd) {
+                    // 只有末尾是真正的运算符才替换
+                    binding.tvMain.text = current.dropLast(1) + str
+                } else {
+                    binding.tvMain.text = current + str
+                }
+            }
+
+            // 处理加、乘、除
+            str.matches(isBinaryOp) -> {
+                if (isRealOperatorAtEnd) {
+                    binding.tvMain.text = current.dropLast(1) + str
+                } else if (lastChar == "." || lastChar == "(" || lastChar == "√") {
+                    return
+                } else {
+                    binding.tvMain.text = current + str
+                }
+            }
+
+            str == "√" -> {
+                if (lastChar == ".") return
+                binding.tvMain.text = current + str
+            }
+
+            // 场景 E：普通追加 (数字、阶乘、括号等)
+            else -> {
+                // 1. 处理 % 后的零
+                if (current.endsWith("%0")) {
+                    if (str == "0") return // 禁止 5%00
+                    if (str.matches("[1-9]".toRegex())) {
+                        binding.tvMain.text = current.dropLast(1) + str // 5%0 -> 5%2
+                        tryLivePreview()
+                        return
+                    }
+                }
+
+                // 2. 处理 ! 后的零 (如果你也想限制 5!00 的话，可以加这一段)
+                if (current.endsWith("!0")) {
+                    if (str == "0") return
+                    if (str.matches("[1-9]".toRegex())) {
+                        binding.tvMain.text = current.dropLast(1) + str
+                        tryLivePreview()
+                        return
+                    }
+                }
+
+                // 3. 正常追加
+                binding.tvMain.text = current + str
+            }
         }
 
-        // 每次点击都尝试即时预览
         tryLivePreview()
+        binding.tvMain.requestLayout()
     }
 
     private fun calculateResult() {
         val expression = binding.tvMain.text.toString()
         if (expression == "0" || expression.isEmpty()) return
 
-        try {
 
+        try {
             if (expression.last() == '√') {
                 throw ArithmeticException("结尾不能是根号")
             }
@@ -127,56 +187,84 @@ class MainActivity3 : AppCompatActivity() {
     }
 
     private fun evaluate(expression: String): Double {
+        if (expression.contains("""\(\)""".toRegex())) {
+            throw ArithmeticException("不允许出现空括号")
+        }
 
+        if (expression.all { it == '(' || it == ')' || it.isWhitespace() }) {
+            throw ArithmeticException("不能只有括号")
+        }
+
+
+        // 1. 自动补全括号
+        // 1. 先补全括号 (这是 6(9 变成 54 的关键第一步)
         var fixedExpression = expression
-
-        // 1. 统计左右括号数量差
         val leftCount = fixedExpression.count { it == '(' }
         val rightCount = fixedExpression.count { it == ')' }
-
-        // 2. 如果左括号多于右括号，在末尾补全
         if (leftCount > rightCount) {
             fixedExpression += ")".repeat(leftCount - rightCount)
         }
 
-        val cleanedExp = fixedExpression
-            .replace("(?<=\\d)√".toRegex(), "×√")
-            .replace("(?<=\\d)\\(".toRegex(), "×(")
-            .replace("\\)(?=\\d)".toRegex(), ")×")
-            .replace("\\)√".toRegex(), ")×√")
-            .replace("!(?=\\d)".toRegex(), "!×")
-            .replace("%(?=\\d)".toRegex(), "%×")
+        // 2. 【核心修改】暂时隐藏科学计数法中的 E+ 和 E-，防止被 replace 误伤
+        // 把 "E+" 换成一个特殊占位符 "###"，把 "E-" 换成 "@@@"
+        var protectedExp = fixedExpression
+            .replace("E+", "###")
+            .replace("E-", "@@@")
 
+        // 3. 执行你原有的各种 replace (现在它们不会碰到科学计数法的符号了)
+        var cleanedExp = protectedExp
+            .replace("(-", "(0-")
+            .replace("(+", "(0+")
+            .replace("×-", "×(0-1)×")
+            .replace("÷-", "÷(0-1)×")
+            .replace("+-", "+(0-1)×")
+            .replace("--", "-(0-1)×")
+
+        if (cleanedExp.startsWith("-")) {
+            cleanedExp = "(0-1)×" + cleanedExp.substring(1)
+        }
+
+        // 补全隐式乘法
+        cleanedExp = cleanedExp
+            .replace("""(?<=\d)\(""".toRegex(), "×(")
+            .replace("""\)(?=\d)""".toRegex(), ")×")
+            .replace("""\)\(""".toRegex(), ")×(")
+            .replace("""(?<=\d)√""".toRegex(), "×√")
+            .replace("""\)√""".toRegex(), ")×√")
+            .replace("""!(?=\d)""".toRegex(), "!×")
+            .replace("""%(?=\d)""".toRegex(), "%×")
+
+        // 4. 【还原】把科学计数法换回来
+        cleanedExp = cleanedExp
+            .replace("###", "E+")
+            .replace("@@@", "E-")
+        // 3. 双栈运算准备
         val numbers = Stack<Double>()
         val operators = Stack<Char>()
 
-        // 重新调整后的正则拆分，确保所有符号都被识别
-        val tokens = cleanedExp.split("(?<=[+\\-×÷()√!%])|(?=[+\\-×÷()√!%])".toRegex())
+        val tokens = mutableListOf<String>()
+        // 这里的正则要支持 E+ 和 E-
+        val pattern = """(\d+\.?\d*([eE][+-]?\d+)?)|[+\-×÷()√!%]""".toRegex()
+        pattern.findAll(cleanedExp).forEach { tokens.add(it.value) }
 
-        for (token in tokens) {
-            val t = token.trim()
-            if (t.isEmpty()) continue
-
+        for (t in tokens) {
             when {
-                // 1. 处理数字
-                t[0].isDigit() || (t.length > 1 && t[0] == '.') -> {
+                // 直接用 toDoubleOrNull 判断，它原生支持 2.13E18 这种格式
+                t.toDoubleOrNull() != null -> {
                     numbers.push(t.toDouble())
                 }
 
-                // 2. 处理根号 (前置符号：优先级极高)
                 t == "√" -> operators.push('√')
-
-                // 3. 处理百分号和阶乘 (后置符号：立即作用于栈顶数字)
                 t == "%" -> if (numbers.isNotEmpty()) numbers.push(numbers.pop() / 100.0)
                 t == "!" -> if (numbers.isNotEmpty()) numbers.push(factorial(numbers.pop()))
-
                 t == "(" -> operators.push('(')
+
                 t == ")" -> {
-                    while (operators.peek() != '(') {
+                    if (!operators.contains('(')) throw ArithmeticException("Error")
+                    while (operators.isNotEmpty() && operators.peek() != '(') {
                         numbers.push(applyOp(operators.pop(), numbers))
                     }
-                    operators.pop()
-                    // 括号算完后，看看前面有没有紧跟根号
+                    if (operators.isNotEmpty()) operators.pop()
                     if (operators.isNotEmpty() && operators.peek() == '√') {
                         numbers.push(applyOp(operators.pop(), numbers))
                     }
@@ -194,7 +282,8 @@ class MainActivity3 : AppCompatActivity() {
         while (operators.isNotEmpty()) {
             numbers.push(applyOp(operators.pop(), numbers))
         }
-        return numbers.pop()
+
+        return if (numbers.isNotEmpty()) numbers.pop() else 0.0
     }
 
     private fun tryLivePreview() {
@@ -260,14 +349,22 @@ class MainActivity3 : AppCompatActivity() {
 
     // 核心运算逻辑
     private fun applyOp(op: Char, numbers: Stack<Double>): Double {
-        // 根号是一元运算
+        // 1. 基础校验：栈空直接抛异常，交给外层 try-catch 处理成 Error
+        if (numbers.isEmpty()) throw ArithmeticException("Invalid")
+
+        // 2. 根号处理 (一元运算)
         if (op == '√') {
             val a = numbers.pop()
+            if (a < 0) throw ArithmeticException("Math Error")
             return sqrt(a)
         }
 
-        // 加减乘除是二元运算
-        if (numbers.size < 2) return if (numbers.isNotEmpty()) numbers.pop() else 0.0
+        // 3. 【核心修改】二元运算 (加减乘除)
+        // 必须确保栈里至少有 2 个数字，否则说明算式残缺（如 "-6-("）
+        if (numbers.size < 2) {
+            throw ArithmeticException("Invalid Expression")
+        }
+
         val b = numbers.pop() // 第二个操作数
         val a = numbers.pop() // 第一个操作数
 
@@ -276,11 +373,8 @@ class MainActivity3 : AppCompatActivity() {
             '-' -> a - b
             '×' -> a * b
             '÷' -> {
-                if (b == 0.0) {
-                    throw ArithmeticException("除数不能为零") // 这里抛异常
-                } else {
-                    a / b
-                }
+                if (b == 0.0) throw ArithmeticException("Div 0")
+                a / b
             }
             else -> 0.0
         }
@@ -288,8 +382,10 @@ class MainActivity3 : AppCompatActivity() {
 
     // 阶乘算法
     private fun factorial(n: Double): Double {
-        if (n < 0) return 0.0
-        if (n == 0.0) return 1.0
+        if (n < 0) throw ArithmeticException("阶乘数目不可为负数")
+        else if (n == 0.0) return 1.0
+        else if (n > 170) throw ArithmeticException("数字太大，无法计算")
+        else if (n % 1 != 0.0) throw ArithmeticException("阶乘不可为小数")
         var res = 1.0
         for (i in 1..n.toInt()) res *= i
         return res
@@ -297,10 +393,32 @@ class MainActivity3 : AppCompatActivity() {
 
     // 格式化结果：如果是整数就不显示 .0
     private fun formatResult(result: Double): String {
-        return if (result == result.toLong().toDouble()) {
-            result.toLong().toString()
-        } else {
-            String.format("%.6f", result).trimEnd('0').trimEnd('.')
+        // 1. 处理特殊情况：无穷大或非法数字
+        if (result.isInfinite() || result.isNaN()) return "Error"
+
+        // 2. 获取绝对值，用于判断是否需要进入“E”模式
+        val absValue = abs(result)
+
+        return when {
+            // 3. 科学计数法：数字太大（10亿以上）或太小（0.0000001以下）
+            // 这里的 1e9 表示 10的9次方，1e-7 表示 10的-7次方
+            absValue >= 1e9 || (absValue < 1e-7 && absValue > 0) -> {
+                // %.6E 会格式化为：1.234567E+12
+                String.format("%.6E", result)
+            }
+
+            // 4. 整数处理：如果 Double 等于它的 Long 值，说明是纯整数
+            result == result.toLong().toDouble() -> {
+                result.toLong().toString()
+            }
+
+            // 5. 普通小数处理：保留 10 位有效小数并去除末尾的 0
+            else -> {
+                // 使用 %.10f 保证高精度，避免 1.1 变成 1.100000
+                String.format("%.10f", result)
+                    .replace("0*$".toRegex(), "") // 去掉末尾所有的0
+                    .replace("\\.$".toRegex(), "") // 如果最后剩下小数点，也去掉
+            }
         }
     }
 
