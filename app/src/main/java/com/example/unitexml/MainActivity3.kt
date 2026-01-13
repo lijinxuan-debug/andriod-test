@@ -1,5 +1,6 @@
 package com.example.unitexml
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -61,6 +62,7 @@ class MainActivity3 : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun appendToMainDisplay(str: String) {
         var current = binding.tvMain.text.toString()
 
@@ -68,17 +70,10 @@ class MainActivity3 : AppCompatActivity() {
         if (current == "Error") {
             current = "0"
         }
-        // 如果当前是纯科学计数法结果（且没开始输入运算符），输入数字则重置
-        if (current.contains("E") && !current.any { "+-×÷".contains(it) && current.indexOf(it) > current.indexOf('E') } && str.matches("[0-9]".toRegex())) {
-            current = "0"
-        }
 
-        val lastChar = if (current.isNotEmpty()) current.last().toString() else ""
-        val isBinaryOp = "[+\\-×÷]".toRegex()
-
-        // 【关键修改】：判断末尾是否为“真正的”运算符（排除 E+ 或 E-）
-        val isRealOperatorAtEnd = lastChar.matches(isBinaryOp) &&
-                (current.length < 2 || current[current.length - 2].uppercaseChar() != 'E')
+        val lastChar = if (current.isNotEmpty()) current.last().toString().trim() else ""
+        val isBinaryOp = "[+×÷-]".toRegex()
+        val isRealOperatorAtEnd = lastChar.matches(isBinaryOp) && !(current.uppercase().endsWith("E+") || current.uppercase().endsWith("E-"))
 
         // 2. 小数点拦截：针对科学计数法特殊处理，不使用 split
         if (str == ".") {
@@ -89,8 +84,8 @@ class MainActivity3 : AppCompatActivity() {
                 if (!afterE.any { "+-×÷".contains(it) && it != '+' && it != '-' }) return
             }
             // 普通小数点逻辑
-            val lastPart = current.split("[+\\-×÷()√!]".toRegex()).last()
-            if (lastPart.contains(".") || lastChar.matches("[!%]".toRegex())) return
+            val lastPart = current.split("[+\\-×÷()√!%]".toRegex()).last()
+            if (lastPart.contains(".")) return
         }
 
         // 3. 核心逻辑处理
@@ -100,14 +95,17 @@ class MainActivity3 : AppCompatActivity() {
                     str == "√" -> binding.tvMain.text = "√"
                     str == "-" -> binding.tvMain.text = "-"
                     str == "." -> binding.tvMain.text = "0."
-                    str.matches(isBinaryOp) || str.matches("[!%]".toRegex()) -> return
+                    // 【核心修改】：允许阶乘 ! 和 百分号 % 追加在 0 后面
+                    str == "!" || str == "%" -> binding.tvMain.text = "0$str"
+                    // 拦截加、乘、除等二元运算符
+                    str.matches(isBinaryOp) -> return
                     else -> binding.tvMain.text = str
                 }
             }
 
             // 处理减号
             str == "-" -> {
-                if (lastChar == "(" || lastChar == "×" || lastChar == "÷") {
+                if (lastChar == "(" || lastChar == "√" || lastChar == "×" || lastChar == "÷") {
                     binding.tvMain.text = current + str
                 } else if (isRealOperatorAtEnd) {
                     // 只有末尾是真正的运算符才替换
@@ -186,7 +184,7 @@ class MainActivity3 : AppCompatActivity() {
         }
     }
 
-    private fun evaluate(expression: String): Double {
+    fun evaluate(expression: String): Double {
         if (expression.contains("""\(\)""".toRegex())) {
             throw ArithmeticException("不允许出现空括号")
         }
@@ -233,6 +231,8 @@ class MainActivity3 : AppCompatActivity() {
             .replace("""\)√""".toRegex(), ")×√")
             .replace("""!(?=\d)""".toRegex(), "!×")
             .replace("""%(?=\d)""".toRegex(), "%×")
+            .replace("""!(?=[.\d])""".toRegex(), "!×")
+            .replace("""%(?=[.\d])""".toRegex(), "%×")
 
         // 4. 【还原】把科学计数法换回来
         cleanedExp = cleanedExp
@@ -244,7 +244,7 @@ class MainActivity3 : AppCompatActivity() {
 
         val tokens = mutableListOf<String>()
         // 这里的正则要支持 E+ 和 E-
-        val pattern = """(\d+\.?\d*([eE][+-]?\d+)?)|[+\-×÷()√!%]""".toRegex()
+        val pattern = """(\d*\.?\d+(E[+-]?\d+)?)|[+\-×÷()√!%]""".toRegex()
         pattern.findAll(cleanedExp).forEach { tokens.add(it.value) }
 
         for (t in tokens) {

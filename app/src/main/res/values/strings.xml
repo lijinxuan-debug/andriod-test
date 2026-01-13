@@ -14,7 +14,7 @@
     <string name="btn_c">C</string>
     <string name="btn_div">÷</string>
     <string name="btn_mul">×</string>
-    <string name="btn_sub">−</string>
+    <string name="btn_sub">-</string>
     <string name="btn_add">+</string>
     <string name="btn_equal">=</string>
     <string name="btn_percent">%</string>
