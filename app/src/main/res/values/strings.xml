@@ -24,4 +24,5 @@
     <string name="btn_factorial">!</string>
     <string name="hint">单个数字不能超过 15 位</string>
     <string name="ic_back">回退</string>
+    <string name="err">Error</string>
 </resources>

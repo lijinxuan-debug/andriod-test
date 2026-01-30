@@ -1,17 +1,19 @@
 package com.example.unitexml.ui
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.text.method.ScrollingMovementMethod
 import android.view.View
-import android.widget.Button
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.ObjectAnimator
 import com.example.unitexml.databinding.ActivityMain3Binding
 import com.example.unitexml.engine.CalculatorEngine
 import com.example.unitexml.utils.CalcUtils
+import androidx.core.view.isVisible
+import com.example.unitexml.R
 
 class MainActivity3 : AppCompatActivity() {
 
@@ -131,6 +133,7 @@ class MainActivity3 : AppCompatActivity() {
         anim.start()
     }
 
+    @SuppressLint("SetTextI18n")
     private fun appendToMainDisplay(str: String) {
         var current = binding.tvMain.text.toString()
 
@@ -145,7 +148,7 @@ class MainActivity3 : AppCompatActivity() {
             val lastNumberPart = current.split("[+×÷\\-()√!%]".toRegex()).last()
 
             if (lastNumberPart.length >= 15) {
-                if (binding.cardToast.visibility == View.VISIBLE) {
+                if (binding.cardToast.isVisible) {
                     // 如果卡片正在显示，就抖两下
                     shakeView(binding.cardToast)
                     // 同时来个震动效果，让用户有所感应
@@ -269,9 +272,9 @@ class MainActivity3 : AppCompatActivity() {
             // 更新 UI
             binding.tvSecondary.text = ""
             binding.tvMain.text = CalcUtils.formatResult(result)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // 如果计算出错（比如除以0，或者括号不匹配）
-            binding.tvMain.text = "Error"
+            binding.tvMain.text = getString(R.string.err)
             binding.tvSecondary.text = ""
         }
     }
@@ -312,9 +315,9 @@ class MainActivity3 : AppCompatActivity() {
             val result = CalculatorEngine.evaluate(calcExpression)
             binding.tvSecondary.text = CalcUtils.formatResult(result)
 
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // 遇到括号未闭合等情况，保持预览区为空
-            binding.tvSecondary.text = "Error"
+            binding.tvSecondary.text = getString(R.string.err)
         }
     }
 }
