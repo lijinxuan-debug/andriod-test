@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">超级计算器</string>
+    <string name="app_name">极简计算器</string>
     <string name="btn_0">0</string>
     <string name="btn_1">1</string>
     <string name="btn_2">2</string>
