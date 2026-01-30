@@ -2,7 +2,7 @@ package com.example.calcultor
 
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.unitexml.MainActivity3
+import com.example.unitexml.ui.MainActivity3
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith

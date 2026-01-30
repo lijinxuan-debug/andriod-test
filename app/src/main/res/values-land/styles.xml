@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="CalcButton.Land" parent="CalcButton">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:insetTop">3dp</item>
+        <item name="android:insetBottom">3dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+    </style>
+
+    <style name="StyleNumeric.Land" parent="CalcButton.Land">
+        <item name="backgroundTint">@color/btn_numeric_bg</item>
+        <item name="android:textColor">@color/text_numeric</item>
+    </style>
+
+    <style name="StyleOperator.Land" parent="CalcButton.Land">
+        <item name="backgroundTint">@color/btn_operator_bg</item>
+        <item name="android:textColor">@color/text_operator</item>
+    </style>
+
+    <style name="StyleEqual.Land" parent="CalcButton.Land">
+        <item name="backgroundTint">@color/btn_equal_bg</item>
+        <item name="android:textColor">@color/text_equal</item>
+        <item name="cornerRadius">20dp</item>
+    </style>
+</resources>

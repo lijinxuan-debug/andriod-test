@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MyCalculator</string>
+    <string name="app_name">超级计算器</string>
     <string name="btn_0">0</string>
     <string name="btn_1">1</string>
     <string name="btn_2">2</string>
@@ -11,7 +11,7 @@
     <string name="btn_8">8</string>
     <string name="btn_9">9</string>
     <string name="btn_dot">.</string>
-    <string name="btn_c">C</string>
+    <string name="btn_c">c</string>
     <string name="btn_div">÷</string>
     <string name="btn_mul">×</string>
     <string name="btn_sub">-</string>
@@ -22,4 +22,6 @@
     <string name="btn_right_bracket">)</string>
     <string name="btn_sqrt">√</string>
     <string name="btn_factorial">!</string>
+    <string name="hint">单个数字不能超过 15 位</string>
+    <string name="ic_back">回退</string>
 </resources>
